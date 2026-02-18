@@ -243,20 +243,22 @@
   }
 
   function normalizeReceived(rows) {
-    // ожидаем 2 колонки: Name, Amount
-    // убираем строки, где нет имени и суммы
+    // ожидаем 3 колонки: Name, Sent, Received
     const data = rows
-      .map(r => [r[0] ?? "", r[1] ?? ""])
-      .filter(r => String(r[0]).trim() !== "" || String(r[1]).trim() !== "");
-
-    // если есть заголовок "Name/Amount" — уберём его
+      .map(r => [r[0] ?? "", r[1] ?? "", r[2] ?? ""])
+      .filter(r => r.some(x => String(x).trim() !== ""));
+  
+    // если есть заголовок — уберём его (Name / Sent / Received)
     const first = data[0] || [];
-    if ((first[0] || "").toLowerCase() === "name" && (first[1] || "").toLowerCase() === "amount") {
+    if ((first[0] || "").toLowerCase() === "name") {
       data.shift();
     }
-
-    // форматируем суммы, но сохраняем "0"
-    return data.map(r => [String(r[0]).trim(), formatAmount(r[1])]);
+  
+    return data.map(r => [
+      String(r[0]).trim(),
+      formatAmount(r[1]),
+      formatAmount(r[2])
+    ]);
   }
 
   function normalizePending(rows) {
@@ -290,10 +292,11 @@
       const pending  = normalizePending(pendingRaw);
 
       receivedWrap.innerHTML = buildTable(
-        ["Name", "Amount"],
+        ["Name", "Sent", "Received"],
         received,
-        ["colName", "colAmount"]
+        ["colName", "colAmount", "colAmount"]
       );
+
 
       pendingWrap.innerHTML = buildTable(
         ["Name", "Amount", "Date"],
@@ -315,6 +318,7 @@
 </script>
 </body>
 </html>
+
 
 
 
