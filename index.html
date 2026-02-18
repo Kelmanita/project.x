@@ -224,11 +224,13 @@
       .filter(r => r.some(x => x !== ""));
   }
 
-  function buildTable(headers, rows, colClasses = [], rowClassFn = null) {
+  function buildTable(headers, rows, colClasses = [], rowClassFn = null, renderCols = null) {
+    const cols = renderCols ?? headers.length;
+  
     const thead = `
       <thead>
         <tr>
-          ${headers.map((h, i) => `<th class="${esc(colClasses[i] || "")}">${esc(h)}</th>`).join("")}
+          ${headers.slice(0, cols).map((h, i) => `<th class="${esc(colClasses[i] || "")}">${esc(h)}</th>`).join("")}
         </tr>
       </thead>
     `;
@@ -237,17 +239,19 @@
       ? `<tbody>
           ${rows.map(r => {
             const rowClass = rowClassFn ? (rowClassFn(r) || "") : "";
+            const cells = (r || []).slice(0, cols);
             return `
               <tr class="${esc(rowClass)}">
-                ${r.map((c, i) => `<td class="${esc(colClasses[i] || "")}">${esc(c)}</td>`).join("")}
+                ${cells.map((c, i) => `<td class="${esc(colClasses[i] || "")}">${esc(c)}</td>`).join("")}
               </tr>
             `;
           }).join("")}
         </tbody>`
-      : `<tbody><tr><td colspan="${headers.length}" class="muted">Нет данных</td></tr></tbody>`;
+      : `<tbody><tr><td colspan="${cols}" class="muted">Нет данных</td></tr></tbody>`;
   
     return `<table>${thead}${tbody}</table>`;
   }
+
 
   function normalizeReceived(rows) {
     // ожидаем 3 колонки: Name, Sent, Received
@@ -314,10 +318,12 @@
 
       pendingWrap.innerHTML = buildTable(
         ["Name", "Amount", "Date"],
-        pending.map(r => [r[0], r[1], r[2]]), // показываем только 3 колонки
+        pending, // <-- передаём все 4 колонки
         ["colName", "colAmount", "colDate"],
-        (r) => (String(r[3]).toLowerCase() === "incomplete" ? "rowIncomplete" : "")
+        (r) => (String(r[3]).trim().toLowerCase() === "incomplete" ? "rowIncomplete" : ""),
+        3 // <-- рисуем только первые 3 колонки
       );
+
 
 
       statusEl.textContent = "Обновлено: " + new Date().toLocaleTimeString();
@@ -334,6 +340,7 @@
 </script>
 </body>
 </html>
+
 
 
 
