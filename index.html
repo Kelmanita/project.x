@@ -110,6 +110,10 @@
       .wrap{ height:auto; min-height:100vh; }
       .tableWrap{ max-height: 55vh; }
     }
+
+    /* подсветка Pending если Incomplete */
+    tr.rowIncomplete td { background:#fff3b0 !important; }
+
   </style>
 </head>
 
@@ -144,7 +148,7 @@
   // PENDING:  H:J  (Name, Amount, Date)
   const RANGES = {
     received: "C2:E",
-    pending:  "I2:K"
+    pending:  "I2:L"
   };
 
   const statusEl = document.getElementById("status");
@@ -220,7 +224,7 @@
       .filter(r => r.some(x => x !== ""));
   }
 
-  function buildTable(headers, rows, colClasses = []) {
+  function buildTable(headers, rows, colClasses = [], rowClassFn = null) {
     const thead = `
       <thead>
         <tr>
@@ -228,17 +232,20 @@
         </tr>
       </thead>
     `;
-
+  
     const tbody = rows.length
       ? `<tbody>
-          ${rows.map(r => `
-            <tr>
-              ${r.map((c, i) => `<td class="${esc(colClasses[i] || "")}">${esc(c)}</td>`).join("")}
-            </tr>
-          `).join("")}
+          ${rows.map(r => {
+            const rowClass = rowClassFn ? (rowClassFn(r) || "") : "";
+            return `
+              <tr class="${esc(rowClass)}">
+                ${r.map((c, i) => `<td class="${esc(colClasses[i] || "")}">${esc(c)}</td>`).join("")}
+              </tr>
+            `;
+          }).join("")}
         </tbody>`
       : `<tbody><tr><td colspan="${headers.length}" class="muted">Нет данных</td></tr></tbody>`;
-
+  
     return `<table>${thead}${tbody}</table>`;
   }
 
@@ -262,19 +269,26 @@
   }
 
   function normalizePending(rows) {
-    // ожидаем 3 колонки: Name, Amount, Date
+    // ожидаем 4 колонки: Name, Amount, Date, Status
     const data = rows
-      .map(r => [r[0] ?? "", r[1] ?? "", r[2] ?? ""])
+      .map(r => [r[0] ?? "", r[1] ?? "", r[2] ?? "", r[3] ?? ""])
       .filter(r => r.some(x => String(x).trim() !== ""));
-
+  
     const first = data[0] || [];
     if ((first[0] || "").toLowerCase() === "name" &&
         (first[1] || "").toLowerCase() === "amount") {
       data.shift();
     }
-
-    return data.map(r => [String(r[0]).trim(), formatAmount(r[1]), String(r[2]).trim()]);
+  
+    // форматируем, статус оставляем как есть
+    return data.map(r => [
+      String(r[0]).trim(),
+      formatAmount(r[1]),
+      String(r[2]).trim(),
+      String(r[3]).trim()
+    ]);
   }
+
 
   async function loadAll() {
     try {
@@ -300,9 +314,11 @@
 
       pendingWrap.innerHTML = buildTable(
         ["Name", "Amount", "Date"],
-        pending,
-        ["colName", "colAmount", "colDate"]
+        pending.map(r => [r[0], r[1], r[2]]), // показываем только 3 колонки
+        ["colName", "colAmount", "colDate"],
+        (r) => (String(r[3]).toLowerCase() === "incomplete" ? "rowIncomplete" : "")
       );
+
 
       statusEl.textContent = "Обновлено: " + new Date().toLocaleTimeString();
     } catch (e) {
@@ -318,6 +334,7 @@
 </script>
 </body>
 </html>
+
 
 
 
